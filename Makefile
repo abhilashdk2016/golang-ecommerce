@@ -22,6 +22,6 @@ docker-up:
 	docker-compose -f docker/docker-compose.yml up -d
 
 docker-down:
-	docker-compose -f docker/docker-compose.yml down -d
+	docker-compose -f docker/docker-compose.yml down
 
 .PHONY: build run dev lint migrate-up migrate-down docker-up docker-down

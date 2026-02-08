@@ -12,6 +12,7 @@ import (
 
 	"github.com/abhilashdk2016/golang-ecommerce/internal/config"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/database"
+	"github.com/abhilashdk2016/golang-ecommerce/internal/interfaces"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/logger"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/providers"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/server"
@@ -47,7 +48,13 @@ func main() {
 	authService := services.NewAuthService(db, cfg)
 	productService := services.NewProductService(db)
 	userService := services.NewUserService(db)
-	uploadService := services.NewUploadService(providers.NewLocalUploadProvider(cfg.Upload.Path))
+	var uploadProvider interfaces.UploadProvider
+	if cfg.Upload.UploadProvider == "s3" {
+		uploadProvider = providers.NewS3Provider(cfg)
+	} else {
+		uploadProvider = providers.NewLocalUploadProvider(cfg.Upload.Path)
+	}
+	uploadService := services.NewUploadService(uploadProvider)
 
 	srv := server.New(cfg, db, &log, authService, productService, userService, uploadService)
 	router := srv.SetupRoutes()
