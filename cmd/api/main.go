@@ -12,6 +12,7 @@ import (
 
 	"github.com/abhilashdk2016/golang-ecommerce/internal/config"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/database"
+	"github.com/abhilashdk2016/golang-ecommerce/internal/events"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/interfaces"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/logger"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/providers"
@@ -64,8 +65,14 @@ func main() {
 	}()
 
 	gin.SetMode(cfg.Server.GinMode)
+	ctx := context.Background()
+	eventPublisher, err := events.NewEventPublisher(ctx, &cfg.AWS)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to create event publisher")
+		return
+	}
 
-	authService := services.NewAuthService(db, cfg)
+	authService := services.NewAuthService(db, cfg, eventPublisher)
 	productService := services.NewProductService(db)
 	userService := services.NewUserService(db)
 	orderService := services.NewOrderService(db)

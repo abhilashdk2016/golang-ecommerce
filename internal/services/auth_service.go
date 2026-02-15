@@ -7,20 +7,23 @@ import (
 
 	"github.com/abhilashdk2016/golang-ecommerce/internal/config"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/dto"
+	"github.com/abhilashdk2016/golang-ecommerce/internal/events"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/models"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/utils"
 	"gorm.io/gorm"
 )
 
 type AuthService struct {
-	db     *gorm.DB
-	config *config.Config
+	db             *gorm.DB
+	config         *config.Config
+	eventPublisher events.Publisher
 }
 
-func NewAuthService(db *gorm.DB, cfg *config.Config) *AuthService {
+func NewAuthService(db *gorm.DB, cfg *config.Config, eventPublisher events.Publisher) *AuthService {
 	return &AuthService{
-		db:     db,
-		config: cfg,
+		db:             db,
+		config:         cfg,
+		eventPublisher: eventPublisher,
 	}
 }
 
@@ -112,6 +115,10 @@ func (a *AuthService) generateAuthResponse(user *models.User) (*dto.AuthResponse
 
 	a.db.Create(&refreshTokenModel)
 
+	err = a.eventPublisher.Publish("USER_LOGIN", user, map[string]string{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to publish user login event: %w", err)
+	}
 	return &dto.AuthResponse{
 		User: dto.UserResponse{
 			ID:        user.ID,
