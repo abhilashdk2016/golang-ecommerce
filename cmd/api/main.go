@@ -20,6 +20,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// @title E-Commerce API
+// @version 1.0
+// @description A modern e-commerce API built with Go, Gin, and GORM
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name   Abhilash D K
+// @contact.url    http://linkedin.com/in/abhilashdk
+// @contact.email  no-email@no-email
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /api/v1
+// @schemas http https
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 func main() {
 	log := logger.New()
 	cfg, err := config.Load()
@@ -48,6 +68,9 @@ func main() {
 	authService := services.NewAuthService(db, cfg)
 	productService := services.NewProductService(db)
 	userService := services.NewUserService(db)
+	orderService := services.NewOrderService(db)
+	cartService := services.NewCartService(db)
+
 	var uploadProvider interfaces.UploadProvider
 	if cfg.Upload.UploadProvider == "s3" {
 		uploadProvider = providers.NewS3Provider(cfg)
@@ -56,7 +79,17 @@ func main() {
 	}
 	uploadService := services.NewUploadService(uploadProvider)
 
-	srv := server.New(cfg, db, &log, authService, productService, userService, uploadService)
+	srv := server.New(
+		cfg,
+		db,
+		&log,
+		authService,
+		productService,
+		userService,
+		uploadService,
+		cartService,
+		orderService,
+	)
 	router := srv.SetupRoutes()
 
 	httpServer := &http.Server{

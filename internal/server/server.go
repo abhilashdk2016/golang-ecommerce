@@ -3,11 +3,15 @@ package server
 import (
 	"net/http"
 
+	_ "github.com/abhilashdk2016/golang-ecommerce/docs"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/config"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/services"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"gorm.io/gorm"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Server struct {
@@ -18,6 +22,8 @@ type Server struct {
 	productService *services.ProductService
 	userService    *services.UserService
 	uploadService  *services.UploadService
+	cartService    *services.CartService
+	orderService   *services.OrderService
 }
 
 func New(
@@ -28,6 +34,8 @@ func New(
 	productService *services.ProductService,
 	userService *services.UserService,
 	uploadService *services.UploadService,
+	cartService *services.CartService,
+	orderService *services.OrderService,
 ) *Server {
 	return &Server{
 		config:         cfg,
@@ -37,6 +45,8 @@ func New(
 		productService: productService,
 		userService:    userService,
 		uploadService:  uploadService,
+		cartService:    cartService,
+		orderService:   orderService,
 	}
 }
 
@@ -51,6 +61,12 @@ func (s *Server) SetupRoutes() *gin.Engine {
 	// Add routes
 	router.GET("/health", s.healthCheck)
 	router.Static("/uploads", "./uploads")
+
+	// add documentation routes
+	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	router.StaticFile("/api-docs", "./docs/rapidoc.html")
+
 	api := router.Group("/api/v1")
 	{
 		auth := api.Group("/auth")
@@ -87,6 +103,24 @@ func (s *Server) SetupRoutes() *gin.Engine {
 			productRoutes.DELETE("/:id", s.adminMiddleware(), s.deleteProduct)
 			productRoutes.POST("/:id/images", s.adminMiddleware(), s.uploadProductImage)
 		}
+
+		cart := protected.Group("/cart")
+		{
+			cartRoutes := cart
+			cartRoutes.GET("/", s.getCart)
+			cartRoutes.POST("/items", s.addToCart)
+			cartRoutes.PUT("/items/:id", s.updateCartItem)
+			cartRoutes.DELETE("/items/:id", s.removeFromCart)
+		}
+
+		orders := protected.Group("/orders")
+		{
+			orderRoutes := orders
+			orderRoutes.POST("/", s.createOrder)
+			orderRoutes.GET("/", s.getOrders)
+			orderRoutes.GET("/:id", s.getOrder)
+		}
+
 		api.GET("/categories", s.getCategories)
 		api.GET("/products", s.getProducts)
 		api.GET("/products/:id", s.getProduct)

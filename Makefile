@@ -18,10 +18,18 @@ dev:
 lint:
 	golangci-lint run ./...
 
+format:
+	@gofmt -s -w .
+	@goimports -w .
+
+docs-generate:
+	mkdir -p docs
+	swag init -g cmd/api/main.go -o docs --parseDependency --parseInternal --exclude .git,docs,docker,db
+
 docker-up:
 	docker-compose -f docker/docker-compose.yml up -d
 
 docker-down:
 	docker-compose -f docker/docker-compose.yml down
 
-.PHONY: build run dev lint migrate-up migrate-down docker-up docker-down
+.PHONY: build run dev lint migrate-up migrate-down docker-up docker-down format docs-generate

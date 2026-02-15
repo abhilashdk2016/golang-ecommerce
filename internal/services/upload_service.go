@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/abhilashdk2016/golang-ecommerce/internal/interfaces"
+	"github.com/google/uuid"
 )
 
 type UploadService struct {
@@ -24,7 +25,7 @@ func (s *UploadService) UploadProductImage(productID uint, file *multipart.FileH
 		return "", fmt.Errorf("invalid file type: %s", ext)
 	}
 
-	path := fmt.Sprintf("products/%d/%s", productID, file.Filename)
+	path := fmt.Sprintf("products/%d/%s%s", productID, uuid.New().String(), ext)
 
 	return s.provider.UploadFile(file, path)
 }
