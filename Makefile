@@ -40,4 +40,8 @@ docker-up:
 docker-down:
 	docker-compose -f docker/docker-compose.yml down
 
-.PHONY: build run dev lint migrate-up migrate-down docker-up docker-down format docs-generate
+graph-generate:
+	@go get github.com/99designs/gqlgen@v0.17.78
+	@go run github.com/99designs/gqlgen generate
+
+.PHONY: build run dev lint migrate-up migrate-down docker-up docker-down format docs-generate graph-generate

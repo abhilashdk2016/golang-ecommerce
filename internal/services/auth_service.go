@@ -13,6 +13,8 @@ import (
 	"gorm.io/gorm"
 )
 
+var _ AuthServiceInterface = (*AuthService)(nil)
+
 type AuthService struct {
 	db             *gorm.DB
 	config         *config.Config
@@ -128,6 +130,8 @@ func (a *AuthService) generateAuthResponse(user *models.User) (*dto.AuthResponse
 			Phone:     user.Phone,
 			Role:      string(user.Role),
 			IsActive:  user.IsActive,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
 		},
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,

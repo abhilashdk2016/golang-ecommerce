@@ -8,6 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
+var _ CartServiceInterface = (*CartService)(nil)
+
 type CartService struct {
 	db *gorm.DB
 }
@@ -129,8 +131,10 @@ func (s *CartService) convertToCartResponse(cart *models.Cart) *dto.CartResponse
 					IsActive:    cart.CartItems[i].Product.Category.IsActive,
 				},
 			},
-			Quantity: cart.CartItems[i].Quantity,
-			Subtotal: subtotal,
+			Quantity:  cart.CartItems[i].Quantity,
+			Subtotal:  subtotal,
+			CreatedAt: cart.CreatedAt,
+			UpdatedAt: cart.UpdatedAt,
 		}
 	}
 
@@ -139,5 +143,7 @@ func (s *CartService) convertToCartResponse(cart *models.Cart) *dto.CartResponse
 		UserID:    cart.UserID,
 		CartItems: cartItems,
 		Total:     total,
+		CreatedAt: cart.CreatedAt,
+		UpdatedAt: cart.UpdatedAt,
 	}
 }

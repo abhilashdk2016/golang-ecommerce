@@ -88,7 +88,6 @@ func main() {
 
 	srv := server.New(
 		cfg,
-		db,
 		&log,
 		authService,
 		productService,

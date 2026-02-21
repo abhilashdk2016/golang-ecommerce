@@ -8,7 +8,6 @@ import (
 	"github.com/abhilashdk2016/golang-ecommerce/internal/services"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
-	"gorm.io/gorm"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -16,30 +15,27 @@ import (
 
 type Server struct {
 	config         *config.Config
-	db             *gorm.DB
 	logger         *zerolog.Logger
-	authService    *services.AuthService
-	productService *services.ProductService
-	userService    *services.UserService
-	uploadService  *services.UploadService
-	cartService    *services.CartService
-	orderService   *services.OrderService
+	authService    services.AuthServiceInterface
+	productService services.ProductServiceInterface
+	userService    services.UserServiceInterface
+	uploadService  services.UploadServiceInterface
+	cartService    services.CartServiceInterface
+	orderService   services.OrderServiceInterface
 }
 
 func New(
 	cfg *config.Config,
-	db *gorm.DB,
 	logger *zerolog.Logger,
-	authService *services.AuthService,
-	productService *services.ProductService,
-	userService *services.UserService,
-	uploadService *services.UploadService,
-	cartService *services.CartService,
-	orderService *services.OrderService,
+	authService services.AuthServiceInterface,
+	productService services.ProductServiceInterface,
+	userService services.UserServiceInterface,
+	uploadService services.UploadServiceInterface,
+	cartService services.CartServiceInterface,
+	orderService services.OrderServiceInterface,
 ) *Server {
 	return &Server{
 		config:         cfg,
-		db:             db,
 		logger:         logger,
 		authService:    authService,
 		productService: productService,
@@ -61,6 +57,19 @@ func (s *Server) SetupRoutes() *gin.Engine {
 	// Add routes
 	router.GET("/health", s.healthCheck)
 	router.Static("/uploads", "./uploads")
+
+	router.GET("/playground", s.playgroundHandler())
+	router.GET("/playground/public", s.playgroundPublicHandler())
+	router.GET("/playground/protected", s.playgroundProtectedHandler())
+
+	graphqlPublic := router.Group("/graphql/public")
+	graphqlPublic.Use(s.graphqlMiddleware())
+	graphqlPublic.POST("/", s.graphqlHandler())
+
+	graphqlProtected := router.Group("/graphql")
+	graphqlProtected.Use(s.authMiddleware())
+	graphqlProtected.Use(s.graphqlMiddleware())
+	graphqlProtected.POST("/", s.graphqlHandler())
 
 	// add documentation routes
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
