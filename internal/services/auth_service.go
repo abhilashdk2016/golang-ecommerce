@@ -59,7 +59,7 @@ func (a *AuthService) Register(req *dto.RegisterRequest) (*dto.AuthResponse, err
 	}
 
 	cart := models.Cart{UserID: user.ID}
-	if err := a.cartRepo.Create(&cart).Error; err != nil {
+	if err := a.cartRepo.Create(&cart); err != nil {
 		fmt.Println("Unable to create cart...")
 	}
 

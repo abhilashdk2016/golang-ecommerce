@@ -133,6 +133,7 @@ func (s *Server) SetupRoutes() *gin.Engine {
 		api.GET("/categories", s.getCategories)
 		api.GET("/products", s.getProducts)
 		api.GET("/products/:id", s.getProduct)
+		api.GET("/search", s.searchProducts)
 	}
 	return router
 }
