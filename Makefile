@@ -35,7 +35,7 @@ docs-generate:
 	swag init -g cmd/api/main.go -o docs --parseDependency --parseInternal --exclude .git,docs,docker,db
 
 docker-up:
-	docker-compose -f docker/docker-compose.yml up -d
+	docker-compose -f docker/docker-compose.yml up -d --build
 
 docker-down:
 	docker-compose -f docker/docker-compose.yml down

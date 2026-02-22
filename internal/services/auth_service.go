@@ -3,35 +3,41 @@ package services
 import (
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/abhilashdk2016/golang-ecommerce/internal/config"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/dto"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/events"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/models"
+	"github.com/abhilashdk2016/golang-ecommerce/internal/repository"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/utils"
-	"gorm.io/gorm"
 )
 
 var _ AuthServiceInterface = (*AuthService)(nil)
 
 type AuthService struct {
-	db             *gorm.DB
+	userRepo       repository.UserRepositoryInterface
+	cartRepo       repository.CartRepositoryInterface
 	config         *config.Config
 	eventPublisher events.Publisher
 }
 
-func NewAuthService(db *gorm.DB, cfg *config.Config, eventPublisher events.Publisher) *AuthService {
+func NewAuthService(
+	cfg *config.Config,
+	eventPublisher events.Publisher,
+	userRepo repository.UserRepositoryInterface,
+	cartRepo repository.CartRepositoryInterface) *AuthService {
 	return &AuthService{
-		db:             db,
 		config:         cfg,
 		eventPublisher: eventPublisher,
+		userRepo:       userRepo,
+		cartRepo:       cartRepo,
 	}
 }
 
 func (a *AuthService) Register(req *dto.RegisterRequest) (*dto.AuthResponse, error) {
-	var existingUser models.User
-	if err := a.db.Where("email = ?", req.Email).First(&existingUser); err == nil {
+	if _, err := a.userRepo.GetByEmail(req.Email); err == nil {
 		return nil, errors.New("you cannot register with this email")
 	}
 	hashedPassword, err := utils.HashPassword(req.Password)
@@ -48,12 +54,12 @@ func (a *AuthService) Register(req *dto.RegisterRequest) (*dto.AuthResponse, err
 		Role:      models.UserRoleCustomer,
 	}
 
-	if err := a.db.Create(&user).Error; err != nil {
+	if err := a.userRepo.Create(&user); err != nil {
 		return nil, err
 	}
 
 	cart := models.Cart{UserID: user.ID}
-	if err := a.db.Create(&cart).Error; err != nil {
+	if err := a.cartRepo.Create(&cart).Error; err != nil {
 		fmt.Println("Unable to create cart...")
 	}
 
@@ -61,8 +67,8 @@ func (a *AuthService) Register(req *dto.RegisterRequest) (*dto.AuthResponse, err
 }
 
 func (a *AuthService) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
-	var user models.User
-	if err := a.db.Where("email = ? AND is_active = ?", req.Email, true).First(&user).Error; err != nil {
+	user, err := a.userRepo.GetByEmailAndActive(req.Email, true)
+	if err != nil {
 		return nil, errors.New("invalid credentials")
 	}
 
@@ -70,7 +76,7 @@ func (a *AuthService) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
 		return nil, errors.New("invalid credentials")
 	}
 
-	return a.generateAuthResponse(&user)
+	return a.generateAuthResponse(user)
 }
 
 func (a *AuthService) RefreshToken(req *dto.RefreshTokenRequest) (*dto.AuthResponse, error) {
@@ -79,23 +85,26 @@ func (a *AuthService) RefreshToken(req *dto.RefreshTokenRequest) (*dto.AuthRespo
 		return nil, errors.New("invalid refresh token")
 	}
 
-	var refreshToken models.RefreshToken
-	if err := a.db.Where("token = ? AND expires_at > ?", req.RefreshToken, time.Now()).First(&refreshToken).Error; err != nil {
+	refreshToken, err := a.userRepo.GetValidRefreshToken(req.RefreshToken)
+	if err != nil {
 		return nil, errors.New("refresh token not found or expired")
 	}
 
-	var user models.User
-	if err := a.db.First(&user, claims.UserID).Error; err != nil {
+	user, err := a.userRepo.GetByID(claims.UserID)
+	if err != nil {
 		return nil, errors.New("user not found")
 	}
 
-	a.db.Delete(&refreshToken)
+	if err := a.userRepo.DeleteRefreshTokenByID(refreshToken.ID); err != nil {
+		log.Println(err)
+		_ = err
+	}
 
-	return a.generateAuthResponse(&user)
+	return a.generateAuthResponse(user)
 }
 
 func (a *AuthService) Logout(refreshToken string) error {
-	return a.db.Where("token = ?", refreshToken).Delete(&models.RefreshToken{}).Error
+	return a.userRepo.DeleteRefreshToken(refreshToken)
 }
 
 func (a *AuthService) generateAuthResponse(user *models.User) (*dto.AuthResponse, error) {
@@ -115,7 +124,10 @@ func (a *AuthService) generateAuthResponse(user *models.User) (*dto.AuthResponse
 		ExpiresAt: time.Now().Add(a.config.JWT.RefreshTokenExpiresIn),
 	}
 
-	a.db.Create(&refreshTokenModel)
+	if err := a.userRepo.CreateRefreshToken(&refreshTokenModel); err != nil {
+		log.Println(err)
+		_ = err
+	}
 
 	err = a.eventPublisher.Publish("USER_LOGIN", user, map[string]string{})
 	if err != nil {

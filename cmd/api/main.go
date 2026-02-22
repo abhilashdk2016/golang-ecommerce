@@ -16,6 +16,7 @@ import (
 	"github.com/abhilashdk2016/golang-ecommerce/internal/interfaces"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/logger"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/providers"
+	"github.com/abhilashdk2016/golang-ecommerce/internal/repository"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/server"
 	"github.com/abhilashdk2016/golang-ecommerce/internal/services"
 	"github.com/gin-gonic/gin"
@@ -72,7 +73,10 @@ func main() {
 		return
 	}
 
-	authService := services.NewAuthService(db, cfg, eventPublisher)
+	userRepo := repository.NewUserRepository(db)
+	cartRepo := repository.NewCartRepository(db)
+
+	authService := services.NewAuthService(cfg, eventPublisher, userRepo, cartRepo)
 	productService := services.NewProductService(db)
 	userService := services.NewUserService(db)
 	orderService := services.NewOrderService(db)
